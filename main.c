@@ -40,7 +40,7 @@
 #include <sys/types.h>
 
 #ifndef MAXSPAM
-#define MAXSPAM 10
+#define MAXSPAM 100
 #endif
 
 #ifndef BLACKLIST
@@ -152,8 +152,7 @@ main(int argc, char *argv[])
 			else
 				err(1,"Memory problem");
 		}
-	 	//res = system(command);
-		res = 0;
+	 	res = system(command);
 		free(command);
 		exit(res);
 	case 1:
