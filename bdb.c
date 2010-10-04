@@ -32,7 +32,11 @@
 #include <pwd.h>
 #include <string.h>
 
+#ifndef _HAVE_DB_H_
 #include <db48/db.h>
+#define _HAVE_DB_H_
+#endif
+
 #include <sys/types.h>
 
 
@@ -44,6 +48,7 @@ void bdb_update_mail_count(const char *dbpath, uid_t uid, int mailcount);
 int bdb_get_score(const char *dbpath, const char *login);
 void bdb_dump_users_score(const char *dbpath);
 void bdb_set_score(const char *dbpath, const char *login, int score);
+void bdb_zero_database(const char *dbpath, int blacklist);
 
 DB 
 *_bdb_open_database(const char *dbpath)
@@ -82,8 +87,7 @@ bdb_create_database(const char *dbpath)
 	DB *map;
 	if(db_create(&map, NULL, 0) != 0) 
 		err(1, "Fail on db_create");
-	warn("Current database (%s) will be erase\n", dbpath);
-	//remove(dbpath);
+	map->set_errfile(map, NULL);
 	if(map->open(map, NULL, dbpath, NULL, DB_BTREE, DB_CREATE | DB_EXCL, 0) != 0)
 		err(1, "Fail on database create");
 	map->close(map, 0);
@@ -126,12 +130,11 @@ bdb_dump_users_score(const char *dbpath)
 	map->cursor(map, NULL, &cursor, 0);	
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
-	key.data = &uid;
-	key.size = sizeof(uid_t); 
 	data.data = &mailcount;
 	data.ulen = sizeof(int);
 	data.flags = DB_DBT_USERMEM;
 	while (cursor->get(cursor, &key, &data, DB_NEXT) == 0) {
+		uid = *((uid_t *)key.data);
 		if((p = getpwuid(uid)) == NULL) {
 			warn("Can't find user for uid : %d\n", uid);
 			continue;
@@ -141,6 +144,34 @@ bdb_dump_users_score(const char *dbpath)
 	cursor->close(cursor);
 	map->close(map, 0); 
 }
+
+void 
+bdb_zero_database(const char *dbpath, int blacklist) 
+{
+	DB *map;
+	DBC *cursor;
+	DBT key, data;
+	int score;
+	map = _bdb_open_database(dbpath);
+	memset(&key, 0, sizeof(DBT));
+	memset(&data, 0, sizeof(DBT));
+	map->cursor(map, NULL, &cursor, 0);
+	data.data = &score;
+	data.ulen = sizeof(int);
+	data.flags = DB_DBT_USERMEM;
+	while(cursor->get(cursor, &key, &data, DB_NEXT) == 0) {
+		if(score != blacklist)
+			cursor->del(cursor, 0);
+	}
+	cursor->close(cursor); 
+	map->close(map, 0);
+}
+
+
+
+
+
+
 
 void
 bdb_set_score(const char *dbpath, const char *login, int score)

@@ -56,7 +56,7 @@
 extern void CREATE_DB(const char *dbpath);
 extern int GET_SCORE(const char *dbpath, const char *login);
 extern void SET_SCORE(const char *dbpath, const char *login, int score);
-extern void ZERO_SCORES(const char *dbpath);
+extern void ZERO_SCORES(const char *dbpath, int blacklist);
 extern void DUMP_DB(const char *dbpath);
 extern int STATUS(const char *dbpath, int maxspam);
 
@@ -82,7 +82,7 @@ int
 main(int argc, char *argv[]) 
 {
 	int c, fflag = 0, cflag = 0, bflag = 0, dflag = 0;
-	int Dflag = 0, zflag = 0, Zflag = 0;
+	int Dflag = 0, zflag = 0, Zflag = 0, res;
 	size_t len;
 	int maxspam = MAXSPAM;
 	char *from = NULL, *sendmail = SENDMAIL, *command;
@@ -131,47 +131,64 @@ main(int argc, char *argv[])
 			usage();
 		}
 	}
-	if(cflag > 0) {
-		CREATE_DB(dbpath);
-		exit(0);
+	switch(cflag + bflag + dflag + Dflag + zflag + Zflag) 
+	{
+	case 0:
+		/* send the mail (or not) */
+		if(STATUS(dbpath, maxspam) < 0)
+			errx(1,"Too many mails sent from your account");
+		len = strlen(sendmail) +6;
+		if(fflag > 1) {
+			len += strlen(from) +4;
+			command = (char *) malloc(sizeof(char) * len);
+			if(command != NULL)
+				snprintf(command, len, "%s -t -i -f %s", sendmail, from);
+			else
+				err(1,"Memory problem");
+		} else { 
+			command = (char *) malloc(sizeof(char) * len);
+			if(command != NULL)
+				snprintf(command, len, "%s -t -i", sendmail);
+			else
+				err(1,"Memory problem");
+		}
+	 	//res = system(command);
+		res = 0;
+		free(command);
+		exit(res);
+	case 1:
+		/* command mode */
+		if(cflag > 0) {
+			CREATE_DB(dbpath);
+			exit(0);
+		}
+		if(bflag > 0) {
+			SET_SCORE(dbpath, user, BLACKLIST);
+			warnx("%s balcklisted", user);
+			exit(0);
+		}
+		if(zflag > 0) {
+			SET_SCORE(dbpath, user, 0);
+			warnx("%s zeroed", user);
+			exit(0);
+		}
+		if(Zflag > 0) {
+			ZERO_SCORES(dbpath, BLACKLIST);
+			warnx("database zeroed");
+			exit(0);
+		}
+		if(dflag > 0) {
+			printf("score: %s\t%d\n", user, GET_SCORE(dbpath, user));
+			exit(0);
+		}
+		if(Dflag > 0) {
+			DUMP_DB(dbpath);
+			exit(0);
+		}
+	default:
+		warnx("Invalid command combinaison");
+		usage();
 	}
-	if(bflag > 0) {
-		SET_SCORE(dbpath, user, BLACKLIST);
-		warn("%s balcklisted\n", user);
-		exit(0);
-	}
-	if(zflag > 0) {
-		SET_SCORE(dbpath, user, 0);
-		warn("%s zeroed\n", user);
-		exit(0);
-	}
-	if(dflag > 0) {
-		printf("score: %s\t%d\n", user, GET_SCORE(dbpath, user));
-		exit(0);
-	}
-	if(Dflag > 0) {
-		DUMP_DB(dbpath);
-		exit(0);
-	}
-	if(STATUS(dbpath, maxspam) < 0)
-		errx(1,"Too many mails sent from your account");
-
-	len = strlen(sendmail) +6;
-	if(fflag > 1) {
-		len += strlen(from) +4;
-		command = (char *) malloc(sizeof(char) * len);
-		if(command != NULL)
-			snprintf(command, len, "%s -t -i -f %s", sendmail, from);
-		else
-			err(1,"Memory problem");
-	} else { 
-		command = (char *) malloc(sizeof(char) * len);
-		if(command != NULL)
-			snprintf(command, len, "%s -t -i", sendmail);
-		else
-			err(1,"Memory problem");
-	}
-	return system(command);
 }
 
 

@@ -47,7 +47,7 @@
  * It makes the progarm failed if a problem append
  * If the user has no entry in database it will add it
  *
- * void ZERO_SCORES(const char *dbpath)
+ * void ZERO_SCORES(const char *dbpath, int balcklist)
  * zero score for all users (or remove them from the database)
  * blacklisted users (score == BLACKLIST) are exclude
  *
@@ -68,7 +68,7 @@
 #define CREATE_DB	bdb_create_database
 #define GET_SCORE	bdb_get_score
 #define SET_SCORE	bdb_set_score
-#define ZERO_SCORES	bdb_zero_scores
+#define ZERO_SCORES	bdb_zero_database
 #define	DUMP_DB		bdb_dump_users_score
 #define	STATUS		bdb_is_a_spammer
 #else /* ! _BACKEND_BDB_ */
