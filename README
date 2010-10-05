@@ -1,0 +1,44 @@
+Send or not send that is the question
+
+This software determie if an user can send a mail or not
+then call the sendmail binairy or return an error.
+
+This is useful with php's sendmail_path
+
+Options :
+	-h show help message
+        -c initalize the score database (currently bdb)
+        -m specify the maximum number of mails an user can send (default 100)
+        -F allow to pass a [-f address] sendmail extra command
+        -s specify the path to sendmail (default /usr/bin/sendmail)
+        -p /path/to/database.db (default /var/db/sendmailornot/spammer.db)
+        -b login blacklist given user
+        -d login dump the user's score
+        -D dump all users score
+        -z login zero a single user score
+        -Z zero all users score (except blacklisted users)
+
+Build :
+
+Current build system only works on *BSD (see BSDmakefile). 
+Autoconf will come soon (or not :)
+
+On other systems you can hand compile :
+
+gcc -O2 -DSENDMAIL=\"/usr/libexec/sendmail/sendmail\" -DBACKEND_BDB -I/usr/local/include -L/usr/local/lib/db48 -ldb -o sendmailornot main.c bdb.c
+
+What you can define is
+
+SENDMAIL	path to the sendmail command you want to use
+MAXSPAM		hard coded maximum number of time this binary can be called
+
+For now you must edit the code to change bdb version, sendmail args ...
+This will be configurable soon.
+
+Backends :
+
+sendmailornot is designed to use different backends. For now only bdb is implemented.
+A backend has his own c file plus a conditional entrie in backends.h and in build system.
+
+You can find in backends.h a description of the backend API (but it should change).
+
